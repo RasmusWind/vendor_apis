@@ -1,12 +1,9 @@
-import json
 import requests
 import os
 import digikey
-# from digikey.v3.batchproductdetails import BatchProductDetailsRequest
 from typing import List, Dict
-from scraper import rs_components_get_single_part
-
-API_KEYS = json.load(open("./api_keys.json"))
+from scraper import rs_components_get_single_part, RS_BASE_URL
+from api_setup import API_KEYS, FARNELL_BASE_URL
 
 def available_apis() -> List[dict]:
     return [("Farnell", farnell_api), ("Digikey", digikey_api), ("Mouser", mouser_api), ("Rscomponents", rscomponents_api)]
@@ -26,6 +23,7 @@ def farnell_api(part_number: str) -> dict:
     api_key = API_KEYS.get("farnell")
     
     if not api_key:
+        print("Missing api key for Farnell")
         return {}
     
     part_number_request_url = f"https://api.element14.com/catalog/products?versionNumber=1.1&term=manuPartNum:{part_number}&storeInfo.id={store}&resultsSettings.offset={offset}&resultsSettings.numberOfResults={requested_number_of_results}&resultsSettings.responseGroup={response_group}&callInfo.omitXmlSchema=true&callInfo.responseDataFormat=json&callinfo.apiKey={api_key}"
@@ -35,7 +33,8 @@ def farnell_api(part_number: str) -> dict:
         return {}
 
     json_response = response.json()
-    
+    if not json_response:
+        return {}
     products = json_response.get('manufacturerPartNumberSearchReturn', {}).get('products', [])
     
     filtered_products = list(filter(lambda x: x.get("translatedManufacturerPartNumber") == part_number, products))
@@ -50,7 +49,7 @@ def farnell_api(part_number: str) -> dict:
         "pricebreaks": pricebreaks,
         "stock": int(part.get("stock", {}).get("level")),
         "leadtime": int(part.get("stock", {}).get("leastLeadTime")),
-        "url":f"https://dk.farnell.com/search?st={part_number}"
+        "url":f"{FARNELL_BASE_URL}search?st={part_number}"
     }
 
     return return_data_dict
@@ -59,14 +58,17 @@ def farnell_api(part_number: str) -> dict:
 def digikey_api(part_number: str) -> dict:
     api_key = API_KEYS.get("digikey")
     if not api_key:
+        print("Missing api keys for DIGIKEY.")
         return {}
+    
     os.environ['DIGIKEY_CLIENT_ID'] = api_key.get("clientid")
     os.environ['DIGIKEY_CLIENT_SECRET'] = api_key.get("clientsecret")
     os.environ['DIGIKEY_CLIENT_SANDBOX'] = 'False'
     os.environ['DIGIKEY_STORAGE_PATH'] = os.getcwd()
     
     part = digikey.product_details(part_number, x_digikey_locale_site='DK', x_digikey_locale_language='da', x_digikey_locale_currency='DKK')
-
+    if not part:
+        return {}
     leadtime = part.lead_status
     if leadtime == "Lead Status unavailable":
         manufacturer_lead_weeks = part.manufacturer_lead_weeks.split(" ")[0]
@@ -90,6 +92,7 @@ def digikey_api(part_number: str) -> dict:
 def mouser_api(part_number: str) -> dict:
     mouser_api_key = API_KEYS.get("mouser")
     if not mouser_api_key:
+        print("Missing api key for Mouser")
         return {}
     
     mouser_post_url = f'https://api.mouser.com/api/v1/search/keyword?apiKey={mouser_api_key}'
@@ -108,6 +111,9 @@ def mouser_api(part_number: str) -> dict:
         return {}
     
     json_response = response.json()
+    if not json_response:
+        return {}
+    
     products = json_response.get("SearchResults", {}).get("Parts")
 
     filtered_products = list(filter(lambda x: x.get("ManufacturerPartNumber") == part_number, products))
@@ -156,7 +162,7 @@ def rscomponents_api(part_number: str) -> dict:
         "pricebreaks": pricebreaks,
         "stock": int(stock),
         "leadtime": leadtime,
-        "url": f"https://dk.rs-online.com/web{part.get('productUrl')}"
+        "url": f"{RS_BASE_URL}web{part.get('productUrl')}"
     }
     return return_data_dict
 
@@ -171,21 +177,24 @@ def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:
         supplier_named_parts = []
         for supplier, api_result in api_results:
             part = [part for part in api_result if part_number in part]
-            if part:
-                part = part[0]
-                if not part[part_number]:
-                    continue
+            if not part:
+                continue
 
-                pricebreaks = part[part_number]["pricebreaks"]
-                prices_by_cheapest_price = sorted(pricebreaks, key=lambda x: float(x.get("cost")))
-                prices_by_least_amount = sorted(pricebreaks, key=lambda x: int(x.get("from")))
-                prices = {
-                    "cheapest": prices_by_cheapest_price[0] if prices_by_cheapest_price else {},
-                    "least_amount": prices_by_least_amount[0] if prices_by_least_amount else {}
-                }
-                part[part_number]["filteredprices"] = prices
+            part = part[0]
+            
+            if not part[part_number]:
+                continue
 
-                supplier_named_parts.append({supplier: part}) 
+            pricebreaks = part[part_number]["pricebreaks"]
+            prices_by_cheapest_price = sorted(pricebreaks, key=lambda x: float(x.get("cost")))
+            prices_by_least_amount = sorted(pricebreaks, key=lambda x: int(x.get("from")))
+            prices = {
+                "cheapest": prices_by_cheapest_price[0] if prices_by_cheapest_price else {},
+                "least_amount": prices_by_least_amount[0] if prices_by_least_amount else {}
+            }
+            part[part_number]["filteredprices"] = prices
+
+            supplier_named_parts.append({supplier: part}) 
 
         cheapest = {}
         for snp in supplier_named_parts:
@@ -230,6 +239,6 @@ def get_single_part_data(part_number):
  
 if __name__ == "__main__":
     mpn = ["M80-8530442", "CLM-110-02-F-D", "INA195AIDBVT"]
-    res = find_cheapest_parts(mpn)
-    # res = rscomponents_api(mpn)
+    # res = find_cheapest_parts(mpn)
+    res = digikey_api("awdnanfien")
     print(res)
