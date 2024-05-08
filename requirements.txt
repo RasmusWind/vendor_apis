@@ -1,0 +1,17 @@
+certauth==1.3.0
+certifi==2024.2.2
+cffi==1.16.0
+charset-normalizer==3.3.2
+cryptography==42.0.7
+digikey-api==1.0.0
+filelock==3.14.0
+idna==3.7
+inflection==0.5.1
+pycparser==2.22
+pyOpenSSL==24.1.0
+requests==2.31.0
+requests-file==2.0.0
+retrying==1.3.4
+six==1.16.0
+tldextract==5.1.2
+urllib3==2.2.1
