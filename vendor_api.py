@@ -5,11 +5,31 @@ from typing import List, Dict
 from scraper import rs_components_get_single_part, RS_BASE_URL
 from api_setup import API_KEYS, FARNELL_BASE_URL
 
+
 def available_apis() -> List[dict]:
     return [("Farnell", farnell_api), ("Digikey", digikey_api), ("Mouser", mouser_api), ("Rscomponents", rscomponents_api)]
 
 
 def farnell_api(part_number: str) -> dict:
+    """
+        Runs an API call.
+        
+        Parameters
+        ----------
+        part_number : str
+            The part number the API should be called with.
+
+        Returns
+        -------
+        dict
+            a dict with the following format:\n
+            {
+                "pricebreaks": List[Dict[str, float]],
+                "stock": int,
+                "leadtime": int,
+                "url": str,
+            }
+    """
     store = "dk.farnell.com" # Which store to query. Our case we query the danish store.
     offset = "0" # Mandatory for keyword search.
     requested_number_of_results = "10" # number of returned results from API. This is to insure the correct item is returned. Could be a mix of reels etc..
@@ -56,6 +76,25 @@ def farnell_api(part_number: str) -> dict:
 
 
 def digikey_api(part_number: str) -> dict:
+    """
+        Runs an API call.
+        
+        Parameters
+        ----------
+        part_number : str
+            The part number the API should be called with.
+
+        Returns
+        -------
+        dict
+            a dict with the following format:\n
+            {
+                "pricebreaks": List[Dict[str, float]],
+                "stock": int,
+                "leadtime": int,
+                "url": str,
+            }
+    """
     api_key = API_KEYS.get("digikey")
     if not api_key:
         print("Missing api keys for DIGIKEY.")
@@ -90,6 +129,25 @@ def digikey_api(part_number: str) -> dict:
 
 
 def mouser_api(part_number: str) -> dict:
+    """
+        Runs an API call.
+        
+        Parameters
+        ----------
+        part_number : str
+            The part number the API should be called with.
+
+        Returns
+        -------
+        dict
+            a dict with the following format:\n
+            {
+                "pricebreaks": List[Dict[str, float]],
+                "stock": int,
+                "leadtime": int,
+                "url": str,
+            }
+    """
     mouser_api_key = API_KEYS.get("mouser")
     if not mouser_api_key:
         print("Missing api key for Mouser")
@@ -147,6 +205,28 @@ def mouser_api(part_number: str) -> dict:
 
 
 def rscomponents_api(part_number: str) -> dict:
+    """
+        Runs a curl command to scrape a product search page and download it as a file.\n
+        From the file it gets the ID and Category of the item, if and item is found.\n
+        Runs another curl command with a new link constructed from ID and Category.\n
+        Deletes downloaded files after use.
+        
+        Parameters
+        ----------
+        part_number : str
+            The part number the scraper should be called with.
+
+        Returns
+        -------
+        dict
+            a dict with the following format:
+            {
+                "pricebreaks": List[Dict[str, float]],
+                "stock": int,
+                "leadtime": int,
+                "url": str,
+            }
+    """
     part = rs_components_get_single_part(part_number)
 
     pricing = part.get("priceBreaks")
@@ -168,6 +248,52 @@ def rscomponents_api(part_number: str) -> dict:
 
 
 def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:    
+    """ 
+    Runs all vendor api calls with chosen part numbers.
+    Finds the cheapest price breaks and least amount break.
+    Sorts on these and returns a dictionary with the part numbers as keys, and vendors with part information as values. 
+    Returns in the following format:
+    {
+        str[part_number as key]: {
+            'cheapest': {
+                'Mouser': {
+                    "pricebreaks": List[Dict[str, float]],
+                    "stock": Int[stock],
+                    "leadtime": Int[leadtime],
+                    "url": Str[url_to_part_page],
+                    'filteredprices': {
+                        'cheapest': {
+                            'from': int, 
+                            'cost': float
+                        }, 
+                        'least_amount': {
+                            'from': int, 
+                            'cost': float
+                        }
+                    }
+                }
+            }, 
+            'least_amount': {
+                'Mouser': {
+                    "pricebreaks": List[Dict[str, float]],
+                    "stock": int,
+                    "leadtime": int,
+                    "url": str,
+                    'filteredprices': {
+                        'cheapest': {
+                            'from': int, 
+                            'cost': float
+                        }, 
+                        'least_amount': {
+                            'from': int, 
+                            'cost': float
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
     apis = available_apis()
 
     api_results = [(supplier_name, [{part_number: api(part_number)} for part_number in part_numbers]) for supplier_name, api in apis]
@@ -231,14 +357,42 @@ def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:
     return cheapest_parts
 
 
-def get_single_part_data(part_number):
+def get_single_part_data(part_number: str) -> List[tuple]:
+    """
+        Runs API calls for all APIs listed in the available_apis function.
+
+        Parameters
+        ----------
+        part_number: str
+            The part number the API should be called with.
+        
+        Returns
+        -------
+        list
+            a list of tuples containing (supplier, part dictionary):\n
+            format: [
+                ("supplier1_name", part_dictionary)
+                ("supplier2_name", part_dictionary)
+            ]
+    """
     apis = available_apis()
     api_results = [(supplier_name, api(part_number)) for supplier_name, api in apis]
     return api_results
 
- 
-if __name__ == "__main__":
-    mpn = ["M80-8530442", "CLM-110-02-F-D", "INA195AIDBVT"]
-    # res = find_cheapest_parts(mpn)
-    res = digikey_api("awdnanfien")
-    print(res)
+# EXAMPLE USAGES OF EACH FUNCTION. READ DOCSTRINGS.
+# if __name__ == "__main__":
+#     mpn = ["M80-8530442", "CLM-110-02-F-D", "INA195AIDBVT"]
+    
+#     digikey_call = digikey_api(mpn[0])
+#     farnell_call = farnell_api(mpn[0])
+#     mouser_call = mouser_api(mpn[0])
+#     rscomponents_call = rscomponents_api(mpn[0])
+#     cheapest_vendors = find_cheapest_parts(mpn)
+#     part_data = get_single_part_data(mpn[0])
+
+#     print(cheapest_vendors, "\n")
+#     print(digikey_call, "\n")
+#     print(farnell_call, "\n")
+#     print(mouser_call, "\n")
+#     print(rscomponents_call, "\n")
+#     print(part_data, "\n")
