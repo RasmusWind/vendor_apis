@@ -43,6 +43,6 @@ def rs_components_get_single_part(part_number):
     data = rs_compontents_scrape_search_results(part_number)
     single_part = [part for part in data if SINGLE_PART_UOMMESSAGE in part.get("uomMessage")]
     if single_part:
-        single_part = rs_components_scrape_product_page(single_part[0])
-    return single_part
+        return rs_components_scrape_product_page(single_part[0])
+    return {}
 

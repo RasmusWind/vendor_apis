@@ -228,7 +228,8 @@ def rscomponents_api(part_number: str) -> dict:
             }
     """
     part = rs_components_get_single_part(part_number)
-
+    if not part:
+        return {}
     pricing = part.get("priceBreaks")
     pricebreaks = [{"from": pricebreak.get("quantity"), "cost": pricebreak.get("price")} for pricebreak in pricing]
     
@@ -381,18 +382,22 @@ def get_single_part_data(part_number: str) -> List[tuple]:
 
 # EXAMPLE USAGES OF EACH FUNCTION. READ DOCSTRINGS.
 # if __name__ == "__main__":
-#     mpn = ["M80-8530442", "CLM-110-02-F-D", "INA195AIDBVT"]
+    # mpn = ["M80-8530442", "CLM-110-02-F-D", "INA195AIDBVT"]
     
-#     digikey_call = digikey_api(mpn[0])
-#     farnell_call = farnell_api(mpn[0])
-#     mouser_call = mouser_api(mpn[0])
-#     rscomponents_call = rscomponents_api(mpn[0])
-#     cheapest_vendors = find_cheapest_parts(mpn)
-#     part_data = get_single_part_data(mpn[0])
+    # digikey_call = digikey_api(mpn[0])
+    # print(digikey_call, "\n")
 
-#     print(cheapest_vendors, "\n")
-#     print(digikey_call, "\n")
-#     print(farnell_call, "\n")
-#     print(mouser_call, "\n")
-#     print(rscomponents_call, "\n")
-#     print(part_data, "\n")
+    # farnell_call = farnell_api(mpn[0])
+    # print(farnell_call, "\n")
+
+    # mouser_call = mouser_api(mpn[0])
+    # print(mouser_call, "\n")
+
+    # rscomponents_call = rscomponents_api(mpn[0])
+    # print(rscomponents_call, "\n")
+
+    # cheapest_vendors = find_cheapest_parts(mpn)
+    # print(cheapest_vendors, "\n")
+
+    # part_data = get_single_part_data(mpn[0])
+    # print(part_data, "\n")
