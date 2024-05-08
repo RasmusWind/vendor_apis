@@ -206,9 +206,9 @@ def mouser_api(part_number: str) -> dict:
 
 def rscomponents_api(part_number: str) -> dict:
     """
-        Runs a curl command to scrape a product search page and download it as a file.\n
+        Runs a GET request to scrape a product search page and download it as a file.\n
         From the file it gets the ID and Category of the item, if and item is found.\n
-        Runs another curl command with a new link constructed from ID and Category.\n
+        Runs another GET request with a new link constructed from ID and Category.\n
         Deletes downloaded files after use.
         
         Parameters

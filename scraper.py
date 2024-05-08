@@ -1,29 +1,26 @@
 import json
-import os
+import requests
 from api_setup import RS_BASE_URL, SINGLE_PART_UOMMESSAGE
 
 def rs_components_scraper(url):
-    os.system(f"curl --output rs_scraped_data.html {url}")
+    res = requests.get(url)
+    content = res.content.decode()
     data = {}
-    with open("./rs_scraped_data.html", "r") as fp:
-        lines = fp.readlines()
-        first_line = None
-        for line in lines:
-            if line.find("__NEXT_DATA__") != -1:
-                first_line = lines.index(line)
-                break
-        if first_line:
-            line = lines[first_line:][0]
-            startsubindex = line.find("__NEXT_DATA__")
-            new_str = line[startsubindex+39:]
-            endsubindex = new_str.find("</script>")
-            new_str = new_str[:endsubindex]
-            try:
-                data = json.loads(new_str)
-            except Exception:
-                print("Could not load scraped string as json.")
-    os.remove("./rs_scraped_data.html")
+    first_line = None
+    if content.find("__NEXT_DATA__") != -1:
+        first_line = content.index("__NEXT_DATA__")
+    if first_line:
+        line = content[first_line:]
+        startsubindex = line.find("__NEXT_DATA__")
+        new_str = line[startsubindex+39:]
+        endsubindex = new_str.find("</script>")
+        new_str = new_str[:endsubindex]
+        try:
+            data = json.loads(new_str)
+        except Exception:
+            print("Could not load scraped string as json.")
     return data
+
 
 def rs_compontents_scrape_search_results(part_number: str) -> list:
     url = f"{RS_BASE_URL}web/c/?searchTerm={part_number}"
