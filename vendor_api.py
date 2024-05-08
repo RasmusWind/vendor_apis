@@ -173,6 +173,18 @@ def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:
             part = [part for part in api_result if part_number in part]
             if part:
                 part = part[0]
+                if not part[part_number]:
+                    continue
+
+                pricebreaks = part[part_number]["pricebreaks"]
+                prices_by_cheapest_price = sorted(pricebreaks, key=lambda x: float(x.get("cost")))
+                prices_by_least_amount = sorted(pricebreaks, key=lambda x: int(x.get("from")))
+                prices = {
+                    "cheapest": prices_by_cheapest_price[0] if prices_by_cheapest_price else {},
+                    "least_amount": prices_by_least_amount[0] if prices_by_least_amount else {}
+                }
+                part[part_number]["filteredprices"] = prices
+
                 supplier_named_parts.append({supplier: part}) 
 
         cheapest = {}
@@ -180,9 +192,9 @@ def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:
             if not cheapest:
                 cheapest = snp
                 continue
-            last_part_cost = cheapest.get(list(cheapest.keys())[0]).get(part_number, {}).get("prices", {}).get("cheapest", {}).get("cost")
-            new_part_cost = snp.get(list(snp.keys())[0]).get(part_number, {}).get("prices", {}).get("cheapest", {}).get("cost")
-            if new_part_cost < last_part_cost:
+            last_part_cost = cheapest.get(list(cheapest.keys())[0]).get(part_number, {}).get("filteredprices", {}).get("cheapest", {}).get("cost")
+            new_part_cost = snp.get(list(snp.keys())[0]).get(part_number, {}).get("filteredprices", {}).get("cheapest", {}).get("cost")
+            if float(new_part_cost) < float(last_part_cost):
                 cheapest = snp
 
         least_amount_cheapest = {}
@@ -190,9 +202,9 @@ def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:
             if not least_amount_cheapest:
                 least_amount_cheapest = snp
                 continue
-            last_part_cost = least_amount_cheapest.get(list(least_amount_cheapest.keys())[0]).get(part_number, {}).get("prices").get("least_amount").get("cost")
-            new_part_cost = snp.get(list(snp.keys())[0]).get(part_number, {}).get("prices").get("least_amount").get("cost")
-            if new_part_cost < last_part_cost:
+            last_part_cost = least_amount_cheapest.get(list(least_amount_cheapest.keys())[0]).get(part_number, {}).get("filteredprices").get("least_amount").get("cost")
+            new_part_cost = snp.get(list(snp.keys())[0]).get(part_number, {}).get("filteredprices").get("least_amount").get("cost")
+            if float(new_part_cost) < float(last_part_cost):
                 least_amount_cheapest = snp
         
         cheapest_keys = list(cheapest.keys())
@@ -213,9 +225,7 @@ def find_cheapest_parts(part_numbers: List[str]) -> Dict[str, dict]:
 def get_single_part_data(part_number):
     apis = available_apis()
     api_results = [(supplier_name, api(part_number)) for supplier_name, api in apis]
-
     return api_results
-
 
  
 if __name__ == "__main__":
